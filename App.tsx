@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { Button, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Button, StyleSheet, Text, TextInput, View, Image } from 'react-native';
 import { useState, useEffect } from 'react';
 
 // Import the functions you need from the SDKs you need
@@ -216,6 +216,10 @@ export default function App() {
             console.log(currentDocument.data());
           });
         }}
+      />
+      <Image 
+        source={{uri: "https://www.warrenphotographic.co.uk/photography/sqrs/41644.jpg"}}
+        style={{width:100, height:100}}
       />
     </View>
 
