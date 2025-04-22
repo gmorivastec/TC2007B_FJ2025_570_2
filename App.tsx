@@ -1,8 +1,29 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { Button, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useState, useEffect } from 'react';
 
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
+import { 
+  initializeAuth,
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  UserCredential,
+  getReactNativePersistence 
+} from "firebase/auth";
+import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  where,
+  onSnapshot,
+  QuerySnapshot
+} from 'firebase/firestore';
 
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
@@ -35,12 +56,171 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
+// Initialize Firebase Authentication and get a reference to the service
+const auth = getAuth(app);
+
+
+// PARA AUTENTICACIÓN PERSISTENTE USA ESTO!
+/*
+const auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(ReactNativeAsyncStorage)
+});
+*/
+
+const db = getFirestore(app);
+
+onAuthStateChanged(
+  auth,
+  user => {
+    if(user) {
+      console.log("USER IS VALIDATED: " + user.email);
+    } else {
+      console.log("LOGGED OUT");
+    }
+  }
+);
+
 export default function App() {
+
+  const[email, setEmail] = useState("");
+  const[password, setPassword] = useState("");
+  const[nombre, setNombre] = useState("");
+  const[raza, setRaza] = useState("");
+
+  useEffect(() => {
+    onSnapshot(
+      collection(db, "perritos"),
+      querySnapshot => {
+
+        querySnapshot.forEach(documentoActual => {
+          console.log(documentoActual.data());
+        });
+      }
+    );
+  }, []);
+
   return (
     <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
       <StatusBar style="auto" />
+      <TextInput 
+        placeholder='email'
+        onChangeText={text => {
+          setEmail(text);
+        }}
+      />
+      <TextInput 
+        placeholder='password'
+        secureTextEntry={true}
+        onChangeText={text => {
+          setPassword(text);
+        }}
+      />
+      <Button 
+        title="Registrarme"
+        onPress={() => {
+          createUserWithEmailAndPassword(auth, email, password)
+          .then((userCredential : UserCredential) => {
+            // esto va a correr cuando la promesa sea resuelta
+            console.log("USUARIO NUEVO REGISTRADO!: " + userCredential.user.email);
+          })
+          .catch(error => {
+            if(error.code == "auth/missing-password")
+              alert("PONLE PASSWORD!");
+
+            console.log("ERROR: " + error.message + " " + error.code);
+          });
+
+          // OJO MUY IMPORTANTE
+          // el código que pongan aquí no va a ejecutarse necesariamente después que lo que viene en el método asíncrono suscrito
+        }}
+      />
+      <Button 
+        title="Entrar"
+        onPress={() =>{
+          signInWithEmailAndPassword(auth, email, password)
+          .then((userCredential : UserCredential) => {
+            console.log("USUARIO VALIDADO!: " + userCredential.user.email);
+          })
+          .catch(
+            error => {
+              console.log("ERROR: " + error);
+            }
+          );
+        }}
+      />
+      <Button 
+        title="Salir"
+        onPress={() => {
+          auth.signOut();
+        }}
+      />
+      <TextInput
+        placeholder='nombre'
+        onChangeText={text => {
+          setNombre(text);
+        }}
+      />
+      <TextInput
+        placeholder='raza'
+        onChangeText={text => {
+          setRaza(text);
+        }}
+      />
+
+      <Button 
+        title='agregar'
+        onPress={async() => {
+          
+          // bloque try-catch
+          // código que puede ser riesgoso debe ser corrido en un bloque try catch 
+          // la intención es lidiar con excepciones de runtime con la mayor gracia posible
+
+          try {
+
+            var perritosCollection = collection(db, "perritos");
+
+            const newDoc = await addDoc(
+              perritosCollection,
+              {
+                nombre : nombre,
+                raza : raza
+              }
+            );
+
+            console.log("ID DEL NUEVO PERRITO: " + newDoc.id);
+
+          } catch(e) {
+            console.log("SI HAY UNA EXCEPCION ESTO CORRE: " + e);
+          } finally {
+            console.log("ESTO SIEMPRE CORRE!");
+          }
+        }}
+      />
+      <Button 
+        title='obtener todos'
+        onPress={async() => {
+          const perritos = collection(db, "perritos");
+          var snapshot = await getDocs(perritos);
+          snapshot.forEach(currentDocument => {
+            console.log(currentDocument.data());
+          });
+        }}
+      />
+      <Button 
+        title='query'
+        onPress={async() => {
+          const perritos = collection(db, "perritos");
+          const q = query(perritos, where("raza", "==", "Callejero"));
+          const snapshot = await getDocs(q);
+          snapshot.forEach(currentDocument => {
+            console.log(currentDocument.data());
+          });
+        }}
+      />
     </View>
+
+
+
   );
 }
 
