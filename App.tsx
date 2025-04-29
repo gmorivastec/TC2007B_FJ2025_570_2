@@ -11,7 +11,8 @@ import {
   signInWithEmailAndPassword,
   onAuthStateChanged,
   UserCredential,
-  getReactNativePersistence 
+  getReactNativePersistence,
+  sendPasswordResetEmail
 } from "firebase/auth";
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -122,6 +123,40 @@ export default function App() {
           .then((userCredential : UserCredential) => {
             // esto va a correr cuando la promesa sea resuelta
             console.log("USUARIO NUEVO REGISTRADO!: " + userCredential.user.email);
+
+          })
+          .catch(error => {
+            if(error.code == "auth/missing-password")
+              alert("PONLE PASSWORD!");
+
+            console.log("ERROR: " + error.message + " " + error.code);
+          });
+
+          // OJO MUY IMPORTANTE
+          // el código que pongan aquí no va a ejecutarse necesariamente después que lo que viene en el método asíncrono suscrito
+        }}
+      />
+      <Button 
+        title="Registrarme sin password"
+        onPress={() => {
+          // workaround - generar un password
+          // al menos 6 caracteres
+          // tratar de incluir letras mayúsculas y minúsculas, números y 
+          // otros caracteres alfanuméricos 
+
+          // NOTA MUY IMPORTANTE
+          // NO DEJEN EL PASSWORD DUMMY, GENEREN UNO
+          createUserWithEmailAndPassword(auth, email, "123456")
+          .then((userCredential : UserCredential) => {
+            // esto va a correr cuando la promesa sea resuelta
+            console.log("USUARIO NUEVO REGISTRADO!: " + userCredential.user.email);
+            sendPasswordResetEmail(auth, email)
+            .then(() => {
+              alert("REVISA TU CORREO PARA TERMINAR DE REGISTRARTE!");
+            })
+            .catch(error => {
+              console.error(error);
+            });
           })
           .catch(error => {
             if(error.code == "auth/missing-password")
